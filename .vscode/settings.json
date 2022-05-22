@@ -1,0 +1,10 @@
+{
+	"makefile.extensionOutputFolder": "./.vscode",
+	"files.associations": {
+		"array": "c",
+		"string": "c",
+		"string_view": "c",
+		"freertos.h": "c",
+		"*.ipp": "c"
+	}
+}
