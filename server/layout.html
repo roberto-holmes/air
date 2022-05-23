@@ -1,2 +1,31 @@
 <h1>{{.PageTitle}}</h1>
-<p>{{.Co2}} ppm, {{.Temp}} C, {{.Humi}} %</p>
+<h3 id="users"></h3>
+<p><span id="time">CO2</span> <span id="co2">CO2</span> ppm, {{.Temp}} C, {{.Humi}} %</p>
+<pre id="output"></pre>
+<script>
+	var users = document.getElementById("users");
+	var co2 = document.getElementById("co2");
+	var time = document.getElementById("time");
+	var input = document.getElementById("input");
+	var output = document.getElementById("output");
+	var socket = new WebSocket("ws://192.168.1.131:8080/ws");
+
+	socket.onopen = function () {
+		output.innerHTML += "Status: Connected\n";
+	};
+
+	socket.onmessage = function (e) {
+		// output.innerHTML += "Server: " + e.data + "\n";
+		// console.log(e);
+		// console.log(e.data);
+		// console.log(JSON.parse(e.data));
+		const data = JSON.parse(e.data);
+		users.innerHTML = data.UserCount;
+		time.innerHTML = data.Time;
+	};
+
+	function send() {
+		socket.send(input.value);
+		input.value = "";
+	}
+</script>

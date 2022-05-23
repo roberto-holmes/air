@@ -1,33 +1,43 @@
 package main
 
 import (
-	"html/template"
+	"fmt"
 	"net/http"
-	"strconv"
+
+	"github.com/roberto-holmes/air/server/websocket"
 )
 
-type Todo struct {
-	Title string
-	Done  bool
+func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
+	fmt.Println("WebSocket Endpoint Hit")
+	conn, err := websocket.Upgrade(w, r)
+	if err != nil {
+		fmt.Fprintf(w, "%+v\n", err)
+	}
+
+	client := &websocket.Client{
+		Conn: conn,
+		Pool: pool,
+	}
+
+	pool.Register <- client
+	client.Update(pool)
 }
 
-type TodoPageData struct {
-	PageTitle string
-	Co2       string
-	Temp      string
-	Humi      string
+func serveSite(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "layout.html")
+}
+
+func setupRoutes() {
+	pool := websocket.NewPool()
+	go pool.Start()
+	http.HandleFunc("/", serveSite)
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(pool, w, r)
+	})
 }
 
 func main() {
-	tmpl := template.Must(template.ParseFiles("layout.html"))
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		data := TodoPageData{
-			PageTitle: "My TODO list",
-			Co2:       strconv.Itoa(400),
-			Temp:      strconv.Itoa(24),
-			Humi:      strconv.Itoa(45),
-		}
-		tmpl.Execute(w, data)
-	})
-	http.ListenAndServe(":80", nil)
+	fmt.Println("Distributed Chat App v0.01")
+	setupRoutes()
+	http.ListenAndServe(":8080", nil)
 }

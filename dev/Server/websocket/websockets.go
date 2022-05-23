@@ -3,10 +3,19 @@ package main
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+// Connection - Websocket connection interface
+type Connection struct {
+	Socket *websocket.Conn
+	mu     sync.Mutex
+}
+
+var sockets = make(map[string]*Connection)
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -24,6 +33,13 @@ func updater(ws *websocket.Conn) {
 func main() {
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 		ws, _ := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
+
+		if sockets[message.SOME_ID] == nil {
+			connection := new(Connection)
+			connection.Socket = conn
+			sockets[message.SOME_ID] = connection
+		}
+
 		go updater(ws)
 		// for {
 		// 	// Read message from browser
