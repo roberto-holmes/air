@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/roberto-holmes/air/server/sensor"
 	"github.com/roberto-holmes/air/server/websocket"
 )
 
@@ -20,15 +21,14 @@ func serveWs(pool *websocket.Pool, w http.ResponseWriter, r *http.Request) {
 	}
 
 	pool.Register <- client
-	client.Update(pool)
+	// client.Update()
 }
 
 func serveSite(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "layout.html")
 }
 
-func setupRoutes() {
-	pool := websocket.NewPool()
+func setupRoutes(pool *websocket.Pool) {
 	go pool.Start()
 	http.HandleFunc("/", serveSite)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +37,14 @@ func setupRoutes() {
 }
 
 func main() {
-	fmt.Println("Distributed Chat App v0.01")
-	setupRoutes()
+	fmt.Println("Running Air Server")
+
+	// c := make(chan Message)
+	pool := websocket.NewPool()
+
+	// Set up HTTP
+	setupRoutes(pool)
+	go sensor.SetupTcp(pool)
+	fmt.Println("Hello?")
 	http.ListenAndServe(":8080", nil)
 }
