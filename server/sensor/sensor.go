@@ -40,7 +40,7 @@ func handleConnection(c net.Conn, hub *websocket.Hub) {
 
 		co2, temp, humi := formatData(buf)
 		log.Printf("Received %v bytes containing %v | CO2: %v ppm, Temp: %v C, Humidity: %v %%\n", reqLen, buf, co2, temp, humi)
-		t := time.Now().GoString()
+		t := time.Now().UnixMilli()
 
 		// Encode data into a message to be passed to the websocket
 		message, err := json.Marshal(websocket.Message{UserCount: len(hub.Clients), Time: t, Co2: co2, Temp: temp, Humi: humi})

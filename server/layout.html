@@ -1,9 +1,9 @@
-<h1>{{.PageTitle}}</h1>
-<h3 id="users"></h3>
-<p><span id="time">time</span> <span id="co2">CO2</span> ppm, <span id="temp">temp</span> C, <span id="humi">humidity</span> %</p>
+<h1>Air Quality</h1>
+<p>Data should update every 5 seconds. Last update received at <span id="time"></span></p>
+<p>CO2: <span id="co2"></span> ppm, Temp: <span id="temp"></span>&#x2103;, Humidity: <span id="humi"></span> %</p>
 <pre id="output"></pre>
 <script>
-	var users = document.getElementById("users");
+	// var users = document.getElementById("users");
 	var time = document.getElementById("time");
 	var co2 = document.getElementById("co2");
 	var temp = document.getElementById("temp");
@@ -11,18 +11,21 @@
 	var output = document.getElementById("output");
 	var socket = new WebSocket("ws://192.168.1.131:8080/ws");
 
-	socket.onopen = function () {
-		output.innerHTML += "Status: Connected\n";
-	};
+	// socket.onopen = function () {
+	// 	output.innerHTML += "Status: Connected\n";
+	// };
 
 	socket.onmessage = function (e) {
 		// output.innerHTML += "Server: " + e.data + "\n";
 		// console.log(e);
 		// console.log(e.data);
 		// console.log(JSON.parse(e.data));
+
 		const data = JSON.parse(e.data);
-		users.innerHTML = data.UserCount;
-		time.innerHTML = data.Time;
+		let date = new Date(data.Time);
+
+		// users.innerHTML = data.UserCount;
+		time.innerHTML = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
 		co2.innerHTML = data.Co2;
 		temp.innerHTML = data.Temp;
 		humi.innerHTML = data.Humi;

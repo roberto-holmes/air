@@ -10,7 +10,7 @@ import (
 
 type Message struct {
 	UserCount int
-	Time      string
+	Time      int64
 	Co2       uint16
 	Temp      float64
 	Humi      float64
