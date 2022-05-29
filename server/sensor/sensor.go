@@ -1,7 +1,9 @@
 package sensor
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"time"
@@ -25,30 +27,37 @@ func formatData(data []byte) (uint16, float64, float64) {
 	return co2, temp, humi
 }
 
-func handleConnection(c net.Conn, pool *websocket.Pool) {
-	fmt.Print("TCP connected")
+func handleConnection(c net.Conn, hub *websocket.Hub) {
+	log.Println("TCP connected")
 	for {
 		// Make a buffer to hold incoming data.
 		buf := make([]byte, 6)
 		// Read the incoming connection into the buffer.
 		reqLen, err := c.Read(buf)
 		if err != nil {
-			fmt.Println("Error reading:", err.Error())
+			log.Println("Error reading:", err.Error())
 		}
 
 		co2, temp, humi := formatData(buf)
-		fmt.Println("Received ", reqLen, " bytes containing ", buf, " | CO2: ", co2, " ppm, Temp: ", temp, " C, Humidity: ", humi, " %")
+		log.Printf("Received %v bytes containing %v | CO2: %v ppm, Temp: %v C, Humidity: %v %%\n", reqLen, buf, co2, temp, humi)
 		t := time.Now().GoString()
-		message := websocket.Message{UserCount: len(pool.Clients), Time: t, Co2: co2, Temp: temp, Humi: humi}
-		pool.Broadcast <- message
+
+		// Encode data into a message to be passed to the websocket
+		message, err := json.Marshal(websocket.Message{UserCount: len(hub.Clients), Time: t, Co2: co2, Temp: temp, Humi: humi})
+		if err != nil {
+			log.Println("Error in encoding to json bytes:", err)
+		}
+		hub.Broadcast <- message
+
+		// Sends data back to sensor for debugging
 		c.Write(buf)
 	}
 	// count--
 	// c.Close()
 }
 
-func SetupTcp(pool *websocket.Pool) {
-	fmt.Println("Setting up tcp")
+func SetupTcp(pool *websocket.Hub) {
+	log.Println("Setting up tcp")
 	l, err := net.Listen("tcp4", ":3333")
 	if err != nil {
 		fmt.Println(err)
