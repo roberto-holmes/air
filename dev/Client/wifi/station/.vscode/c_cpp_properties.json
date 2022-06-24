@@ -5,10 +5,10 @@
 			"includePath": ["${workspaceFolder}/**", "C:/Espressif/frameworks/esp-idf-v4.4.1/components/**"],
 			"defines": ["_DEBUG", "UNICODE", "_UNICODE"],
 			"windowsSdkVersion": "10.0.19041.0",
-			"compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/cl.exe",
+			"compilerPath": "C:/Espressif/tools/xtensa-esp32-elf-clang/esp-14.0.0-20220415-x86_64-pc-windows-msvc/bin/xtensa-esp32-elf-gcc.exe",
 			"cStandard": "c17",
 			"cppStandard": "c++17",
-			"intelliSenseMode": "windows-msvc-x64"
+			"intelliSenseMode": "gcc-arm"
 		}
 	],
 	"version": 4

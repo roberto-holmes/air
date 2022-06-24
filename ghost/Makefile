@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := air_client
+PROJECT_NAME := ghost
 
 EXTRA_COMPONENT_DIRS = $(IDF_PATH)/examples/common_components/protocol_examples_common
 
