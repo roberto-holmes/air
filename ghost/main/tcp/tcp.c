@@ -122,8 +122,10 @@ void tcp_client_task()
             goto retry_tcp;
         }
         // Check if the server accepted the given MAC address
-        if (!memcmp(rx_buffer, tx_buffer, 7))
+        if (memcmp(rx_buffer, tx_buffer, 7))
         {
+            ESP_LOGI(TAG, "TX MAC Address is %X:%X:%X:%X:%X:%X %X", tx_buffer[0], tx_buffer[1], tx_buffer[2], tx_buffer[3], tx_buffer[4], tx_buffer[5], tx_buffer[6]);
+            ESP_LOGI(TAG, "RX MAC Address is %X:%X:%X:%X:%X:%X %X", rx_buffer[0], rx_buffer[1], rx_buffer[2], rx_buffer[3], rx_buffer[4], rx_buffer[5], rx_buffer[6]);
             ESP_LOGW(TAG, "Returned MAC address is new");
             // TODO: Update MAC address if the server issues a new one
             // esp_err_t esp_base_mac_addr_set(uint8_t *mac)
