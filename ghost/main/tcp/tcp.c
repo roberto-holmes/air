@@ -137,7 +137,7 @@ void tcp_client_task()
         while (1)
         {
             xQueueReceive(sensor_data_queue, &sensor_packet, portMAX_DELAY);
-            ESP_LOGW(TAG, "Collected 0x%llX from the queue", sensor_packet);
+            // ESP_LOGW(TAG, "Collected 0x%llX from the queue", sensor_packet);
 
             timestamp = (sensor_packet >> 32) + unix_time_offset_s;
 
@@ -149,6 +149,8 @@ void tcp_client_task()
             tx_buffer[5] = (uint8_t)(sensor_packet >> 16);
             tx_buffer[6] = (uint8_t)(sensor_packet >> 8);
             tx_buffer[7] = crc_generate(tx_buffer, 7);
+
+            ESP_LOGI(TAG, "Sending: %u %u %u %u %u %u %u %u", tx_buffer[0], tx_buffer[1], tx_buffer[2], tx_buffer[3], tx_buffer[4], tx_buffer[5], tx_buffer[6], tx_buffer[7]);
 
             err = send(sock, tx_buffer, sizeof(tx_buffer), 0);
             if (err < 0)
@@ -165,13 +167,16 @@ void tcp_client_task()
                 break;
             }
             // Data received
-            else
+
+            // rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
+            if (memcmp(rx_buffer, tx_buffer, 8))
             {
-                // rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-                ESP_LOGI(TAG, "Received %d bytes from %s", len, host_ip);
-                // ESP_LOGI(TAG, "%u %u %u %u", rx_buffer[0], rx_buffer[1], rx_buffer[2], rx_buffer[3]);
-                // ESP_LOGI(TAG, "%u %u %u %u %u %u", rx_buffer[0], rx_buffer[1], rx_buffer[2], rx_buffer[3], rx_buffer[4], rx_buffer[5]);
+                ESP_LOGE(TAG, "Server response incorrect");
+                break;
             }
+            ESP_LOGI(TAG, "Received the correct %d bytes from %s", len, host_ip);
+            // ESP_LOGI(TAG, "%u %u %u %u", rx_buffer[0], rx_buffer[1], rx_buffer[2], rx_buffer[3]);
+            // ESP_LOGI(TAG, "%u %u %u %u %u %u", rx_buffer[0], rx_buffer[1], rx_buffer[2], rx_buffer[3], rx_buffer[4], rx_buffer[5]);
         }
 
     retry_tcp:

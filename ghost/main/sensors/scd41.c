@@ -52,7 +52,7 @@ void scd_41_process_data(sensor_type_t sensor, uint8_t *data)
         data_packet |= (uint64_t)(time / 100) << 32;
 
         xQueueSend(sensor_data_queue, &data_packet, 10);
-        ESP_LOGI(TAG, "Added 0x%llX to the queue, current time is %u", data_packet, time / 100);
+        // ESP_LOGI(TAG, "Added 0x%llX to the queue, current time is %u", data_packet, time / 100);
     }
     else
     {
@@ -78,6 +78,8 @@ void scd41_task()
         scd_41_process_data(sensor_co2, scd41_raw_output);
         scd_41_process_data(sensor_temp, scd41_raw_output);
         scd_41_process_data(sensor_humi, scd41_raw_output);
+
+        ESP_LOGI(TAG, "Current free RAM = %u B and minimum free RAM = %u B", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
 
         // float temp = -45 + 175 * (float)processed_data[1] / 0xFFFF;
         // float humi = 100 * (float)processed_data[2] / 0xFFFF;
