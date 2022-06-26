@@ -20,4 +20,4 @@ Toolchain: https://docs.espressif.com/projects/esp-idf/en/v4.4.1/esp32s3/index.h
 
 ### Server
 
-`go run FILE`
+`go run .` or (`go build .` and `./server.exe`)
