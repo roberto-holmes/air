@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/roberto-holmes/air/server/sensor"
+	"github.com/roberto-holmes/air/server/ghost"
 	"github.com/roberto-holmes/air/server/websocket"
 )
 
@@ -30,7 +30,7 @@ func main() {
 	go hub.Run()
 
 	// Setup TCP route
-	go sensor.SetupTcp(hub)
+	go ghost.SetupTcp(hub)
 
 	// Set up HTTP and websocket routes
 	http.HandleFunc("/", serveSite)

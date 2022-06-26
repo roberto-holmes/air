@@ -1,7 +1,7 @@
 #include "main.h"
 
 #include "network/wifi.h"
-#include "scd41/scd41.h"
+#include "sensors/scd41.h"
 #include "tcp/tcp.h"
 
 #include "esp_wifi.h"
@@ -24,10 +24,9 @@ void app_main(void)
 
     // Initialise TCP/IP stack
     ESP_ERROR_CHECK(esp_netif_init());
-    // ESP_ERROR_CHECK(esp_event_loop_create_default());
-    scd41_co2_queue = xQueueCreate(1, sizeof(uint16_t));
-    scd41_temp_queue = xQueueCreate(1, sizeof(uint16_t));
-    scd41_humi_queue = xQueueCreate(1, sizeof(uint16_t));
+
+    // Create a Queue for the sensor data
+    sensor_data_queue = xQueueCreate(6, sizeof(uint64_t));
 
     xTaskCreate(tcp_client_task, "tcp_client", 4096, NULL, 4, NULL);
     xTaskCreate(scd41_task, "scd41", 4096, NULL, 5, NULL);

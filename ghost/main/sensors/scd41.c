@@ -1,9 +1,11 @@
 #include "scd41.h"
+#include "../util/crc.h"
 #include "../main.h"
 
 #include "driver/i2c.h"
+// #include "time.h"
 
-static const char *TAG_SCD = "SCD41";
+static const char *TAG = "SCD41";
 
 // Sensor defines
 #define I2C_SCL_IO 9
@@ -23,12 +25,47 @@ static esp_err_t i2c_master_init(void);
 static esp_err_t scd41_send_command(uint16_t reg_addr);
 static esp_err_t scd41_read(uint16_t reg_addr, uint8_t *data, size_t len);
 
+typedef enum
+{
+    sensor_co2,
+    sensor_temp,
+    sensor_humi
+} sensor_type_t;
+
+void scd_41_process_data(sensor_type_t sensor, uint8_t *data)
+{
+    uint64_t data_packet;
+    uint8_t crc_buffer[3];
+
+    // All three sensor values are stored back to back in the data array
+    uint8_t offset = 3 * (uint8_t)sensor;
+
+    crc_buffer[1] = data[0 + offset];
+    crc_buffer[2] = data[1 + offset];
+
+    // If the data from the sensor is valid, create the packet and send it
+    if (crc_check(data[2 + offset], &crc_buffer[1], 2))
+    {
+        crc_buffer[0] = sensor;
+        data_packet = crc_buffer[0] << 24 | crc_buffer[1] << 16 | crc_buffer[2] << 8 | crc_generate(crc_buffer, 3);
+        uint32_t time = xTaskGetTickCount();
+        data_packet |= (uint64_t)(time / 100) << 32;
+
+        xQueueSend(sensor_data_queue, &data_packet, 10);
+        ESP_LOGI(TAG, "Added 0x%llX to the queue, current time is %u", data_packet, time / 100);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Sensor produced invalid data");
+    }
+}
+
 void scd41_task()
 {
-    ESP_LOGI(TAG_SCD, "Initialising I2C");
+    ESP_LOGI(TAG, "Initialising I2C");
     ESP_ERROR_CHECK(i2c_master_init());
 
-    ESP_LOGI(TAG_SCD, "Starting measurement");
+    ESP_LOGI(TAG, "Starting measurement");
     scd41_send_command(SCD41_START_MEASUREMENT);
 
     vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -38,31 +75,14 @@ void scd41_task()
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         ESP_ERROR_CHECK(scd41_read(SCD41_READ_MEASUREMENT, scd41_raw_output, 9));
 
-        uint8_t data_out[6];
+        scd_41_process_data(sensor_co2, scd41_raw_output);
+        scd_41_process_data(sensor_temp, scd41_raw_output);
+        scd_41_process_data(sensor_humi, scd41_raw_output);
 
-        data_out[0] = scd41_raw_output[0];
-        data_out[1] = scd41_raw_output[1];
-        data_out[2] = scd41_raw_output[3];
-        data_out[3] = scd41_raw_output[4];
-        data_out[4] = scd41_raw_output[6];
-        data_out[5] = scd41_raw_output[7];
+        // float temp = -45 + 175 * (float)processed_data[1] / 0xFFFF;
+        // float humi = 100 * (float)processed_data[2] / 0xFFFF;
 
-        uint16_t processed_data[3];
-
-        processed_data[0] = scd41_raw_output[0] << 8 | scd41_raw_output[1]; // CO2
-        processed_data[1] = scd41_raw_output[3] << 8 | scd41_raw_output[4]; // Temp
-        processed_data[2] = scd41_raw_output[6] << 8 | scd41_raw_output[7]; // Humidity
-
-        float temp = -45 + 175 * (float)processed_data[1] / 0xFFFF;
-        float humi = 100 * (float)processed_data[2] / 0xFFFF;
-
-        printf("CO2: %u ppm, Temp: %.1f C, Humidity: %.1f %%\n", processed_data[0], temp, humi);
-        // ESP_LOGI(TAG_SCD, "Adding %u %u %u to queue:", processed_data[0], processed_data[1], processed_data[2]);
-        ESP_LOGI(TAG_SCD, "Adding %u %u %u %u %u %u to queue:", data_out[0], data_out[1], data_out[2], data_out[3], data_out[4], data_out[5]);
-        // xQueueSend(scd41_queue, data_out, 10);
-        xQueueSend(scd41_co2_queue, processed_data, 10);
-        xQueueSend(scd41_temp_queue, &processed_data[1], 10);
-        xQueueSend(scd41_humi_queue, &processed_data[2], 10);
+        // printf("CO2: %u ppm, Temp: %.1f C, Humidity: %.1f %%\n", processed_data[0], temp, humi);
     }
 }
 

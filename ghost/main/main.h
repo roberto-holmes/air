@@ -5,6 +5,6 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 
-QueueHandle_t scd41_co2_queue, scd41_temp_queue, scd41_humi_queue;
+QueueHandle_t sensor_data_queue;
 
 #endif
