@@ -25,8 +25,8 @@ void app_main(void)
     // Initialise TCP/IP stack
     ESP_ERROR_CHECK(esp_netif_init());
 
-    // Create a Queue for the sensor data
-    sensor_data_queue = xQueueCreate(6, sizeof(uint64_t));
+    // Create a Queue for the sensor data (5760 allows for an hour of data collection without talking to the server)
+    sensor_data_queue = xQueueCreate(5760, sizeof(uint64_t));
 
     xTaskCreate(tcp_client_task, "tcp_client", 4096, NULL, 4, NULL);
     xTaskCreate(scd41_task, "scd41", 4096, NULL, 5, NULL);
