@@ -1,6 +1,8 @@
 package ghost
 
 import (
+	"context"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"math"
@@ -9,11 +11,19 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gocql/gocql"
 	"github.com/roberto-holmes/air/server/util"
-	"github.com/roberto-holmes/air/server/websocket"
 )
 
 const packetLength = 8
+
+type DataType uint8
+
+const (
+	Co2 DataType = iota
+	Temperature
+	Humidity
+)
 
 var count int32 = 0
 
@@ -31,7 +41,7 @@ func formatData(data []byte) (uint16, float64, float64) {
 	return co2, temp, humi
 }
 
-func handleConnection(c net.Conn, hub *websocket.Hub) {
+func handleConnection(c net.Conn, session *gocql.Session, ctx context.Context) {
 	defer log.Println("TCP disconnected")
 	defer c.Close()
 
@@ -105,7 +115,30 @@ func handleConnection(c net.Conn, hub *websocket.Hub) {
 		return
 	}
 
-	log.Printf("Handshake success with device %X:%X:%X:%X:%X:%X\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5])
+	mac := fmt.Sprintf("%X:%X:%X:%X:%X:%X", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5])
+	log.Printf("Handshake success with device %s\n", mac)
+
+	table_title_co2 := "co2_" + mac
+	table_title_temp := "temp_" + mac
+	table_title_humi := "humi_" + mac
+
+	log.Printf("Creating table: %v", table_title_co2)
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS ? ( timestamp timestamp PRIMARY KEY, value int )`, table_title_co2).WithContext(ctx).Exec(); err != nil {
+		log.Printf("Unable to create table: %v\n", err)
+	}
+
+	log.Printf("Creating table: %v", table_title_temp)
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS ? ( timestamp timestamp PRIMARY KEY, value int )`, table_title_temp).WithContext(ctx).Exec(); err != nil {
+		log.Printf("Unable to create table: %v\n", err)
+	}
+
+	log.Printf("Creating table: %v", table_title_humi)
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS ? ( timestamp timestamp PRIMARY KEY, value int )`, table_title_humi).WithContext(ctx).Exec(); err != nil {
+		log.Printf("Unable to create table: %v\n", err)
+	}
+
+	// Wait for tables to be created
+	time.Sleep(1 * time.Second)
 
 	for {
 		// Read the incoming connection into the buffer.
@@ -124,6 +157,28 @@ func handleConnection(c net.Conn, hub *websocket.Hub) {
 		// CRC
 		if !util.CrcCheck(buf[packetLength-1], buf, packetLength-1) {
 			log.Printf("Invalid CRC. Expected %v but received %v\n", util.CrcGenerate(buf, packetLength-1), buf[packetLength-1])
+		}
+
+		timestamp := binary.BigEndian.Uint32(buf[0:4]) * 1000
+		dataType := DataType(buf[4])
+		data := binary.BigEndian.Uint16(buf[5:7])
+
+		tableTitle := mac
+
+		switch dataType {
+		case Co2:
+			tableTitle = table_title_co2
+		case Temperature:
+			tableTitle = table_title_temp
+		case Humidity:
+			tableTitle = table_title_humi
+		default:
+			log.Printf("%v is an invalid Data Type", dataType)
+			tableTitle += "-undefined"
+		}
+
+		if err := session.Query(`INSERT INTO ? (timestamp, value) VALUES (?, ?)`, tableTitle, timestamp, data).WithContext(ctx).Exec(); err != nil {
+			log.Fatal(err)
 		}
 
 		// else {
@@ -145,7 +200,7 @@ func handleConnection(c net.Conn, hub *websocket.Hub) {
 	}
 }
 
-func SetupTcp(pool *websocket.Hub) {
+func SetupTcp(session *gocql.Session, ctx context.Context) {
 	log.Println("Setting up tcp")
 	l, err := net.Listen("tcp4", ":3333")
 	if err != nil {
@@ -160,6 +215,6 @@ func SetupTcp(pool *websocket.Hub) {
 			fmt.Println(err)
 			return
 		}
-		go handleConnection(c, pool)
+		go handleConnection(c, session, ctx)
 	}
 }
