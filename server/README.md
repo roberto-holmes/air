@@ -6,3 +6,5 @@ Run container:
 
 Stop container:
 `docker stop go`
+docker compose up --build
+docker compose exec cassandra /bin/bash

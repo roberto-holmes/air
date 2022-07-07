@@ -84,8 +84,10 @@ void tcp_client_task()
         }
 
         // Store the offset to unix time so that a time stamp can be sent with data
-        unix_time_offset_s = rx_buffer[0] << 24 | rx_buffer[1] << 16 | rx_buffer[2] << 8 | rx_buffer[3];
+        unix_time_offset_s = rx_buffer[3] << 24 | rx_buffer[2] << 16 | rx_buffer[1] << 8 | rx_buffer[0];
+        ESP_LOGI(TAG, "Unix Time = %u s", unix_time_offset_s);
         unix_time_offset_s -= xTaskGetTickCount() / 100;
+        ESP_LOGI(TAG, "Offset = %u s", unix_time_offset_s);
 
         // Prepare response
         for (size_t i = 0; i < 4; i++)

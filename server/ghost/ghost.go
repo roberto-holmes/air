@@ -54,6 +54,7 @@ func handleConnection(c net.Conn, session *gocql.Session, ctx context.Context) {
 
 	// Handshake
 	unixTime := uint32(time.Now().Unix())
+	log.Printf("Unix time = %v", unixTime)
 	for i := 0; i < 4; i++ {
 		buf[i] = uint8(unixTime >> (i * 8))
 	}
@@ -118,22 +119,18 @@ func handleConnection(c net.Conn, session *gocql.Session, ctx context.Context) {
 	mac := fmt.Sprintf("%X:%X:%X:%X:%X:%X", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5])
 	log.Printf("Handshake success with device %s\n", mac)
 
-	table_title_co2 := "co2_" + mac
-	table_title_temp := "temp_" + mac
-	table_title_humi := "humi_" + mac
-
-	log.Printf("Creating table: %v", table_title_co2)
-	if err := session.Query(`CREATE TABLE IF NOT EXISTS ? ( timestamp timestamp PRIMARY KEY, value int )`, table_title_co2).WithContext(ctx).Exec(); err != nil {
+	log.Printf("Creating CO2 table")
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS co2 ( id timeuuid PRIMARY KEY, timestamp timestamp, mac text, value int )`).WithContext(ctx).Exec(); err != nil {
 		log.Printf("Unable to create table: %v\n", err)
 	}
 
-	log.Printf("Creating table: %v", table_title_temp)
-	if err := session.Query(`CREATE TABLE IF NOT EXISTS ? ( timestamp timestamp PRIMARY KEY, value int )`, table_title_temp).WithContext(ctx).Exec(); err != nil {
+	log.Printf("Creating temp table")
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS temperature ( id timeuuid PRIMARY KEY, timestamp timestamp, mac text, value int )`).WithContext(ctx).Exec(); err != nil {
 		log.Printf("Unable to create table: %v\n", err)
 	}
 
-	log.Printf("Creating table: %v", table_title_humi)
-	if err := session.Query(`CREATE TABLE IF NOT EXISTS ? ( timestamp timestamp PRIMARY KEY, value int )`, table_title_humi).WithContext(ctx).Exec(); err != nil {
+	log.Printf("Creating humid table")
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS humidity ( id timeuuid PRIMARY KEY, timestamp timestamp, mac text, value int )`).WithContext(ctx).Exec(); err != nil {
 		log.Printf("Unable to create table: %v\n", err)
 	}
 
@@ -159,26 +156,29 @@ func handleConnection(c net.Conn, session *gocql.Session, ctx context.Context) {
 			log.Printf("Invalid CRC. Expected %v but received %v\n", util.CrcGenerate(buf, packetLength-1), buf[packetLength-1])
 		}
 
-		timestamp := binary.BigEndian.Uint32(buf[0:4]) * 1000
+		timestamp := binary.BigEndian.Uint32(buf[0:4])
 		dataType := DataType(buf[4])
 		data := binary.BigEndian.Uint16(buf[5:7])
 
 		tableTitle := mac
 
+		log.Printf("Time = %v", timestamp)
 		switch dataType {
 		case Co2:
-			tableTitle = table_title_co2
+			if err := session.Query(`INSERT INTO CO2 (id, timestamp, mac, value) VALUES (?, ?, ?, ?)`, gocql.TimeUUID(), time.Unix(int64(timestamp), 0), mac, data).WithContext(ctx).Exec(); err != nil {
+				log.Fatal(err)
+			}
 		case Temperature:
-			tableTitle = table_title_temp
+			if err := session.Query(`INSERT INTO temperature (id, timestamp, mac, value) VALUES (?, ?, ?, ?)`, gocql.TimeUUID(), time.Unix(int64(timestamp), 0), mac, data).WithContext(ctx).Exec(); err != nil {
+				log.Fatal(err)
+			}
 		case Humidity:
-			tableTitle = table_title_humi
+			if err := session.Query(`INSERT INTO humidity (id, timestamp, mac, value) VALUES (?, ?, ?, ?)`, gocql.TimeUUID(), time.Unix(int64(timestamp), 0), mac, data).WithContext(ctx).Exec(); err != nil {
+				log.Fatal(err)
+			}
 		default:
 			log.Printf("%v is an invalid Data Type", dataType)
 			tableTitle += "-undefined"
-		}
-
-		if err := session.Query(`INSERT INTO ? (timestamp, value) VALUES (?, ?)`, tableTitle, timestamp, data).WithContext(ctx).Exec(); err != nil {
-			log.Fatal(err)
 		}
 
 		// else {

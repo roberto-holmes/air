@@ -48,7 +48,7 @@ void scd_41_process_data(sensor_type_t sensor, uint8_t *data)
     {
         crc_buffer[0] = sensor;
         data_packet = crc_buffer[0] << 24 | crc_buffer[1] << 16 | crc_buffer[2] << 8 | crc_generate(crc_buffer, 3);
-        uint32_t time = xTaskGetTickCount();
+        uint32_t time = xTaskGetTickCount() / 100;
         data_packet |= (uint64_t)(time / 100) << 32;
 
         xQueueSend(sensor_data_queue, &data_packet, 10);
