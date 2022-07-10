@@ -8,3 +8,6 @@ Stop container:
 `docker stop go`
 docker compose up --build
 docker compose exec cassandra /bin/bash
+
+tsc.cmd -w
+npx tailwindcss -i ./styles_raw.css -o ./styles.css --watch

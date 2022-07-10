@@ -6,16 +6,25 @@
 #include "lwipopts.h"
 #include "lwip/sockets.h"
 
+typedef enum
+{
+    Home,
+    Versinetic,
+    ByteSnap
+} location_t;
+
 static const char *TAG = "TCP";
 static const int retry_delay = 10; // Seconds
 
 #define HOST_IP_ADDR "192.168.1.131"
 #define PORT 3333
 
+#define CURRENT_LOCATION Home
+
 void tcp_client_task()
 {
-    uint8_t tx_buffer[8];
-    uint8_t rx_buffer[8];
+    uint8_t tx_buffer[9];
+    uint8_t rx_buffer[9];
     uint32_t unix_time_offset_s;
     char host_ip[] = HOST_IP_ADDR;
     int addr_family = 0;
@@ -152,9 +161,10 @@ void tcp_client_task()
             tx_buffer[4] = (uint8_t)(sensor_packet >> 24);
             tx_buffer[5] = (uint8_t)(sensor_packet >> 16);
             tx_buffer[6] = (uint8_t)(sensor_packet >> 8);
-            tx_buffer[7] = crc_generate(tx_buffer, 7);
+            tx_buffer[7] = (uint8_t)CURRENT_LOCATION;
+            tx_buffer[8] = crc_generate(tx_buffer, 8);
 
-            ESP_LOGI(TAG, "Sending: %u %u %u %u %u %u %u %u", tx_buffer[0], tx_buffer[1], tx_buffer[2], tx_buffer[3], tx_buffer[4], tx_buffer[5], tx_buffer[6], tx_buffer[7]);
+            ESP_LOGI(TAG, "Sending: %u %u %u %u %u %u %u %u %u", tx_buffer[0], tx_buffer[1], tx_buffer[2], tx_buffer[3], tx_buffer[4], tx_buffer[5], tx_buffer[6], tx_buffer[7], tx_buffer[8]);
 
             err = send(sock, tx_buffer, sizeof(tx_buffer), 0);
             if (err < 0)

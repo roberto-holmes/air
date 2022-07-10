@@ -3,9 +3,9 @@ package ghost
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"net"
 	"reflect"
 	"sync/atomic"
@@ -13,11 +13,13 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/roberto-holmes/air/server/util"
+	"github.com/roberto-holmes/air/server/websocket"
 )
 
-const packetLength = 8
+const packetLength = 9
 
 type DataType uint8
+type Location uint8
 
 const (
 	Co2 DataType = iota
@@ -25,23 +27,29 @@ const (
 	Humidity
 )
 
+const (
+	Home Location = iota
+	Versinetic
+	ByteSnap
+)
+
 var count int32 = 0
 
-func formatData(data []byte) (uint16, float64, float64) {
-	co2 := uint16(data[0])<<8 | uint16(data[1])
-	temp_int := uint16(data[2])<<8 | uint16(data[3])
-	humi_int := uint16(data[4])<<8 | uint16(data[5])
+// func formatData(data []byte) (uint16, float64, float64) {
+// 	co2 := uint16(data[0])<<8 | uint16(data[1])
+// 	temp_int := uint16(data[2])<<8 | uint16(data[3])
+// 	humi_int := uint16(data[4])<<8 | uint16(data[5])
 
-	temp := -45 + 175*float64(temp_int)/0xFFFF
-	humi := 100 * float64(humi_int) / 0xFFFF
+// 	temp := -45 + 175*float64(temp_int)/0xFFFF
+// 	humi := 100 * float64(humi_int) / 0xFFFF
 
-	temp = math.Round(temp*10) / 10
-	humi = math.Round(humi*10) / 10
+// 	temp = math.Round(temp*10) / 10
+// 	humi = math.Round(humi*10) / 10
 
-	return co2, temp, humi
-}
+// 	return co2, temp, humi
+// }
 
-func handleConnection(c net.Conn, session *gocql.Session, ctx context.Context) {
+func handleConnection(c net.Conn, session *gocql.Session, ctx context.Context, hub *websocket.Hub) {
 	defer log.Println("TCP disconnected")
 	defer c.Close()
 
@@ -120,17 +128,17 @@ func handleConnection(c net.Conn, session *gocql.Session, ctx context.Context) {
 	log.Printf("Handshake success with device %s\n", mac)
 
 	log.Printf("Creating CO2 table")
-	if err := session.Query(`CREATE TABLE IF NOT EXISTS co2 ( id timeuuid PRIMARY KEY, timestamp timestamp, mac text, value int )`).WithContext(ctx).Exec(); err != nil {
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS co2 ( id timeuuid PRIMARY KEY, timestamp timestamp, location int, value int )`).WithContext(ctx).Exec(); err != nil {
 		log.Printf("Unable to create table: %v\n", err)
 	}
 
 	log.Printf("Creating temp table")
-	if err := session.Query(`CREATE TABLE IF NOT EXISTS temperature ( id timeuuid PRIMARY KEY, timestamp timestamp, mac text, value int )`).WithContext(ctx).Exec(); err != nil {
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS temperature ( id timeuuid PRIMARY KEY, timestamp timestamp, location int, value int )`).WithContext(ctx).Exec(); err != nil {
 		log.Printf("Unable to create table: %v\n", err)
 	}
 
 	log.Printf("Creating humid table")
-	if err := session.Query(`CREATE TABLE IF NOT EXISTS humidity ( id timeuuid PRIMARY KEY, timestamp timestamp, mac text, value int )`).WithContext(ctx).Exec(); err != nil {
+	if err := session.Query(`CREATE TABLE IF NOT EXISTS humidity ( id timeuuid PRIMARY KEY, timestamp timestamp, location int, value int )`).WithContext(ctx).Exec(); err != nil {
 		log.Printf("Unable to create table: %v\n", err)
 	}
 
@@ -159,26 +167,23 @@ func handleConnection(c net.Conn, session *gocql.Session, ctx context.Context) {
 		timestamp := binary.BigEndian.Uint32(buf[0:4])
 		dataType := DataType(buf[4])
 		data := binary.BigEndian.Uint16(buf[5:7])
+		location := Location(buf[7])
 
-		tableTitle := mac
-
-		log.Printf("Time = %v", timestamp)
 		switch dataType {
 		case Co2:
-			if err := session.Query(`INSERT INTO CO2 (id, timestamp, mac, value) VALUES (?, ?, ?, ?)`, gocql.TimeUUID(), time.Unix(int64(timestamp), 0), mac, data).WithContext(ctx).Exec(); err != nil {
+			if err := session.Query(`INSERT INTO CO2 (id, timestamp, location, value) VALUES (?, ?, ?, ?)`, gocql.TimeUUID(), time.Unix(int64(timestamp), 0), location, data).WithContext(ctx).Exec(); err != nil {
 				log.Fatal(err)
 			}
 		case Temperature:
-			if err := session.Query(`INSERT INTO temperature (id, timestamp, mac, value) VALUES (?, ?, ?, ?)`, gocql.TimeUUID(), time.Unix(int64(timestamp), 0), mac, data).WithContext(ctx).Exec(); err != nil {
+			if err := session.Query(`INSERT INTO temperature (id, timestamp, location, value) VALUES (?, ?, ?, ?)`, gocql.TimeUUID(), time.Unix(int64(timestamp), 0), location, data).WithContext(ctx).Exec(); err != nil {
 				log.Fatal(err)
 			}
 		case Humidity:
-			if err := session.Query(`INSERT INTO humidity (id, timestamp, mac, value) VALUES (?, ?, ?, ?)`, gocql.TimeUUID(), time.Unix(int64(timestamp), 0), mac, data).WithContext(ctx).Exec(); err != nil {
+			if err := session.Query(`INSERT INTO humidity (id, timestamp, location, value) VALUES (?, ?, ?, ?)`, gocql.TimeUUID(), time.Unix(int64(timestamp), 0), location, data).WithContext(ctx).Exec(); err != nil {
 				log.Fatal(err)
 			}
 		default:
 			log.Printf("%v is an invalid Data Type", dataType)
-			tableTitle += "-undefined"
 		}
 
 		// else {
@@ -189,18 +194,18 @@ func handleConnection(c net.Conn, session *gocql.Session, ctx context.Context) {
 		// t := time.Now().UnixMilli()
 
 		// Encode data into a message to be passed to the websocket
-		// message, err := json.Marshal(websocket.Message{UserCount: len(hub.Clients), Time: t, Co2: co2, Temp: temp, Humi: humi})
-		// if err != nil {
-		// 	log.Println("Error in encoding to json bytes:", err)
-		// }
-		// hub.Broadcast <- message
+		message, err := json.Marshal(websocket.Message{UserCount: len(hub.Clients), Time: timestamp, Value: data, Type: uint8(dataType), Location: uint8(location)})
+		if err != nil {
+			log.Println("Error in encoding to json bytes:", err)
+		}
+		hub.Broadcast <- message
 
 		// Sends data back to sensor for debugging
 		c.Write(buf)
 	}
 }
 
-func SetupTcp(session *gocql.Session, ctx context.Context) {
+func SetupTcp(session *gocql.Session, ctx context.Context, hub *websocket.Hub) {
 	log.Println("Setting up tcp")
 	l, err := net.Listen("tcp4", ":3333")
 	if err != nil {
@@ -215,6 +220,6 @@ func SetupTcp(session *gocql.Session, ctx context.Context) {
 			fmt.Println(err)
 			return
 		}
-		go handleConnection(c, session, ctx)
+		go handleConnection(c, session, ctx, hub)
 	}
 }

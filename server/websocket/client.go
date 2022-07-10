@@ -5,15 +5,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
 type Message struct {
 	UserCount int
-	Time      int64
-	Co2       uint16
-	Temp      float64
-	Humi      float64
+	Location  uint8
+	Type      uint8
+	Time      uint32
+	Value     uint16
 }
 
 const (
@@ -87,8 +88,8 @@ func (c *Client) writePump() {
 }
 
 // serveWs handles websocket requests from the peer.
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+func ServeWs(c *gin.Context, hub *Hub) {
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println(err)
 		return
