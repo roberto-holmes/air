@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link href="/dist/output.css" rel="stylesheet" />
+		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	</head>
+
+	<body>
+		<div class="card w-96 bg-base-100 shadow-xl bg-teal-200">
+			<div class="card-body">
+				<div>
+					<h2 class="card-title float-left">Versinetic</h2>
+					<p class="float-right pt-1">Last update: 5s ago</p>
+				</div>
+				<p class="text-center">CO<sub>2</sub>: 552ppm, 23&#8451;, 50% Relative Humidity</p>
+			</div>
+			<div>
+				<div class="card-actions dropdown dropdown-end float-right">
+					<label tabindex="0" class="btn btn-sm m-2">Period</label>
+					<ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+						<li><a>Past Hour</a></li>
+						<li><a>Past Day</a></li>
+						<li><a>Past Week</a></li>
+						<li><a>All Data</a></li>
+					</ul>
+				</div>
+				<div class="tabs pt-5">
+					<a class="tab tab-lifted tab-active" id="0-co2Tab">CO<sub>2</sub></a>
+					<a class="tab tab-lifted" id="0-tempTab">Temperature</a>
+					<a class="tab tab-lifted" id="0-humiTab">Humidity</a>
+				</div>
+			</div>
+			<div class="bg-white">
+				<canvas id="0-co2Chart"></canvas>
+				<canvas id="0-tempChart"></canvas>
+				<canvas id="0-humiChart"></canvas>
+			</div>
+		</div>
+	</body>
+
+	<script>
+		class Location {
+			constructor(id, name) {
+				this.id = id;
+				this.prefix = id + "-";
+				this.name = name;
+				this.co2ChartElement = document.getElementById(this.prefix + "co2Chart");
+				this.tempChartElement = document.getElementById(this.prefix + "tempChart");
+				this.humiChartElement = document.getElementById(this.prefix + "humiChart");
+
+				this.co2Colour = "rgb(255, 99, 132)";
+				this.tempColour = "rgb(94, 234, 212)";
+				this.humiColour = "rgb(251, 146, 60)";
+
+				this.co2Chart = this.generateCo2Chart();
+				this.tempChart = this.generateTempChart();
+				this.humiChart = this.generateHumiChart();
+
+				this.tempChartElement.style.display = "none";
+				this.humiChartElement.style.display = "none";
+
+				this.addOnclick();
+			}
+			addOnclick() {
+				this.co2Tab = document.getElementById(this.prefix + "co2Tab");
+				this.tempTab = document.getElementById(this.prefix + "tempTab");
+				this.humiTab = document.getElementById(this.prefix + "humiTab");
+
+				console.log(this.co2Tab);
+
+				this.co2Tab.onclick = this.toggleTab(this.co2Tab);
+				// co2Tab.onclick = function() {alert('clicked');};
+				this.tempTab.onclick = this.toggleTab(this.tempTab);
+				this.humiTab.onclick = this.toggleTab(this.humiTab);
+
+				console.log(this.co2Tab);
+			}
+			generateCo2Chart() {
+				const data = {
+					datasets: [
+						{
+							backgroundColor: this.co2Colour,
+							borderColor: this.co2Colour,
+							data: [
+								{ x: 10, y: 20 },
+								{ x: 15, y: 15 },
+								{ x: 20, y: 10 },
+							],
+						},
+					],
+				};
+
+				const config = {
+					type: "scatter",
+					data: data,
+					options: {
+						plugins: {
+							legend: false,
+						},
+					},
+				};
+				return new Chart(this.co2ChartElement, config);
+			}
+			generateTempChart() {
+				const data = {
+					datasets: [
+						{
+							backgroundColor: this.tempColour,
+							borderColor: this.tempColour,
+							data: [
+								{ x: 10, y: 20 },
+								{ x: 15, y: 15 },
+								{ x: 20, y: 10 },
+							],
+						},
+					],
+				};
+				const config = {
+					type: "scatter",
+					data: data,
+					options: {
+						plugins: {
+							legend: false,
+						},
+					},
+				};
+				return new Chart(this.tempChartElement, config);
+			}
+			generateHumiChart() {
+				const data = {
+					datasets: [
+						{
+							backgroundColor: this.humiColour,
+							borderColor: this.humiColour,
+							data: [
+								{ x: 10, y: 20 },
+								{ x: 15, y: 15 },
+								{ x: 20, y: 10 },
+							],
+						},
+					],
+				};
+
+				const config = {
+					type: "scatter",
+					data: data,
+					options: {
+						plugins: {
+							legend: false,
+						},
+					},
+				};
+				return new Chart(this.humiChartElement, config);
+			}
+			toggleTab(element) {
+				console.log(element);
+				if (element.classList.contains("tab-active")) console.log("Already selected");
+				else {
+					const activeTabs = document.getElementsByClassName("tab-active");
+					console.log(activeTabs);
+					for (let i = 0; i < activeTabs.length; i++) {
+						activeTabs[i].classList.remove("tab-active");
+					}
+
+					// Change which graph is being displayed
+					if (element.id === this.prefix + "co2Tab") {
+						this.co2ChartElement.style.display = "block";
+						this.tempChartElement.style.display = "none";
+						this.humiChartElement.style.display = "none";
+					} else if (element.id === this.prefix + "tempTab") {
+						this.co2ChartElement.style.display = "none";
+						this.tempChartElement.style.display = "block";
+						this.humiChartElement.style.display = "none";
+					} else if (element.id === this.prefix + "humiTab") {
+						this.co2ChartElement.style.display = "none";
+						this.tempChartElement.style.display = "none";
+						this.humiChartElement.style.display = "block";
+					}
+
+					element.classList.add("tab-active");
+				}
+			}
+			updateChart(chart, data) {
+				console.log(data);
+				console.log(myChart.data.datasets[0].data);
+				chart.data.datasets.forEach((dataset) => {
+					dataset.data.push(data);
+				});
+				console.log(chart.data.datasets[0].data);
+				chart.update();
+			}
+		}
+
+		const versinetic = new Location(0, "Versinetic");
+	</script>
+</html>

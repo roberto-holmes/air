@@ -1,14 +1,18 @@
 {
 	"compilerOptions": {
 		"noImplicitAny": true,
+		"outDir": "./dist/",
 		"target": "ES2021",
-		"module": "commonjs",
+		// "module": "commonjs",
+		// "requirejs": "latest",
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true
-	},
-	"$schema": "https://json.schemastore.org/tsconfig",
-	"display": "Recommended",
-	"files": ["air.ts"]
+		"forceConsistentCasingInFileNames": true,
+		"moduleResolution": "node",
+		"allowJs": true
+	}
+	// "$schema": "https://json.schemastore.org/tsconfig",
+	// "display": "Recommended",
+	// "files": ["air.ts"]
 }

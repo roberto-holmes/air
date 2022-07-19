@@ -54,4 +54,29 @@ dkms.conf
 # ESP IDF Build directories
 **/build/
 
+# Temp folder for files to "borrow" from
 /dev/
+
+# Webpack
+**/node_modules
+server/web/test/js
+server/web/test/browsertest/js
+server/web/test/fixtures/temp-*
+server/web/test/temp
+server/web/test/ChangesAndRemovals
+server/web/test/**/dev-defaults.webpack.lock
+server/web/benchmark/js
+server/web/benchmark/fixtures
+server/web/examples/**/dist
+server/web/assembly/**/*.wat
+server/web/assembly/**/*.wasm
+server/web/coverage
+server/web/.nyc_output
+server/web/.jest-cache
+server/web/.DS_Store
+server/web/*.log
+server/web/.idea
+server/web/.vscode
+server/web/.cache
+server/web/.eslintcache
+**/package-lock.json
