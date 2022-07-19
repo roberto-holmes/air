@@ -16,7 +16,7 @@ enum SensorType {
 // Chart.defaults.color = "#fff";
 // Chart.defaults.color = "#000";
 
-// getPastData();
+getPastData();
 // setupWebsocket();
 // graph();
 

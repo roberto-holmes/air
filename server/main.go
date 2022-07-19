@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/roberto-holmes/air/server/cassandra"
-	"github.com/roberto-holmes/air/server/ghost"
 	"github.com/roberto-holmes/air/server/websocket"
 )
 
@@ -32,27 +30,25 @@ func main() {
 	go hub.Run()
 
 	// Setup database
-	fmt.Println("Connecting to Cassandra")
-	session := cassandra.ConnectDatabase("cassandra", "air")
-	ctx := context.Background()
+	// fmt.Println("Connecting to Cassandra")
+	// session := cassandra.ConnectDatabase("cassandra", "air")
+	// ctx := context.Background()
 
-	cassandra.SetContext(ctx)
+	// cassandra.SetContext(ctx)
 
 	// Setup TCP route
-	go ghost.SetupTcp(session, ctx, hub)
+	// go ghost.SetupTcp(session, ctx, hub)
 
 	r := gin.Default()
 	// r.Static("/assets")
-	r.LoadHTMLGlob("web/*.html")
+	r.LoadHTMLGlob("web/dist/*.html")
 	// API to get all past data
 	r.GET("/data", cassandra.PopulatePastData)
 
 	// Main site
-	r.Static("/web", "./web")
+	r.Static("/web/dist", "./web/dist")
 	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{
-			"title": "Air",
-		})
+		c.HTML(http.StatusOK, "index.html", gin.H{})
 	})
 	r.GET("/ws", func(c *gin.Context) {
 		websocket.ServeWs(c, hub)
