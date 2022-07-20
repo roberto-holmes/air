@@ -6,37 +6,39 @@
 </head>
 
 <body class="min-h-screen bg-gray-600">
-	<div class="flex justify-center">
-		<div class="card w-96 shadow-xl bg-teal-300 text-gray-800">
-			<div class="card-body">
+	<div id="card-container" class="flex justify-center">
+		<template>
+			<div id="cardMain" class="card w-96 shadow-xl text-gray-800">
+				<div class="card-body">
+					<div>
+						<h2 id="title" class="card-title float-left">Versinetic</h2>
+						<p id="lastUpdate" class="float-right pt-1">Last update: 5s ago</p>
+					</div>
+					<p class="text-center">552ppm CO<sub>2</sub>, 23&#8451;, 50% Relative Humidity</p>
+				</div>
 				<div>
-					<h2 id="0-title" class="card-title float-left">Versinetic</h2>
-					<p id="0-lastUpdate" class="float-right pt-1">Last update: 5s ago</p>
+					<div class="card-actions dropdown dropdown-end float-right">
+						<label tabindex="0" class="btn btn-sm m-2">Period</label>
+						<ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+							<li><a>Past Hour</a></li>
+							<li><a>Past Day</a></li>
+							<li><a>Past Week</a></li>
+							<li><a>All Data</a></li>
+						</ul>
+					</div>
+					<div class="tabs pt-5">
+						<a class="tab tab-lifted tab-active" id="co2Tab">CO<sub>2</sub></a>
+						<a class="tab tab-lifted" id="tempTab">Temperature</a>
+						<a class="tab tab-lifted" id="humiTab">Humidity</a>
+					</div>
 				</div>
-				<p class="text-center">552ppm CO<sub>2</sub>, 23&#8451;, 50% Relative Humidity</p>
-			</div>
-			<div>
-				<div class="card-actions dropdown dropdown-end float-right">
-					<label tabindex="0" class="btn btn-sm m-2">Period</label>
-					<ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
-						<li><a>Past Hour</a></li>
-						<li><a>Past Day</a></li>
-						<li><a>Past Week</a></li>
-						<li><a>All Data</a></li>
-					</ul>
-				</div>
-				<div class="tabs pt-5">
-					<a class="tab tab-lifted tab-active" id="0-co2Tab">CO<sub>2</sub></a>
-					<a class="tab tab-lifted" id="0-tempTab">Temperature</a>
-					<a class="tab tab-lifted" id="0-humiTab">Humidity</a>
+				<div class="bg-white">
+					<canvas id="co2Chart"></canvas>
+					<canvas id="tempChart"></canvas>
+					<canvas id="humiChart"></canvas>
 				</div>
 			</div>
-			<div class="bg-white">
-				<canvas id="0-co2Chart"></canvas>
-				<canvas id="0-tempChart"></canvas>
-				<canvas id="0-humiChart"></canvas>
-			</div>
-		</div>
+		</template>
 	</div>
 </body>
 
