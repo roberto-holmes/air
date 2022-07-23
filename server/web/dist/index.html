@@ -1,45 +1,44 @@
+<!DOCTYPE html>
 <head>
-	<meta charset="utf-8" />
-	<!-- <link rel="stylesheet" href="/web/dist/styles.css" /> -->
-
-	<title>Air</title>
+    <meta charset="utf-8" />
+    <title>Air</title>
 </head>
 
 <body class="min-h-screen bg-gray-600">
-	<div id="card-container" class="pt-8 flex flex-wrap justify-center gap-4">
-		<template>
-			<div id="cardMain" class="card flex-none lg:w-96 w-11/12 shadow-xl text-gray-800">
-				<div class="card-body">
-					<div>
-						<h2 id="title" class="card-title float-left">Versinetic</h2>
-						<p id="lastUpdate" class="float-right pt-1">Last update: 5s ago</p>
-					</div>
-					<p class="text-center">552ppm CO<sub>2</sub>, 23&#8451;, 50% Relative Humidity</p>
-				</div>
-				<div>
-					<div class="card-actions dropdown dropdown-end float-right">
-						<label tabindex="0" class="btn btn-sm m-2">Period</label>
-						<ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
-							<li><a>Past Hour</a></li>
-							<li><a>Past Day</a></li>
-							<li><a>Past Week</a></li>
-							<li><a>All Data</a></li>
-						</ul>
-					</div>
-					<div class="tabs pt-5">
-						<a class="tab tab-lifted tab-active" id="co2Tab">CO<sub>2</sub></a>
-						<a class="tab tab-lifted" id="tempTab">Temperature</a>
-						<a class="tab tab-lifted" id="humiTab">Humidity</a>
-					</div>
-				</div>
-				<div class="bg-white">
-					<canvas id="co2Chart"></canvas>
-					<canvas id="tempChart"></canvas>
-					<canvas id="humiChart"></canvas>
-				</div>
-			</div>
-		</template>
-	</div>
+    <div id="card-container" class="pt-8 flex flex-wrap justify-center gap-4">
+        <template>
+            <div id="cardMain" class="card flex-none lg:w-96 w-11/12 shadow-xl text-gray-800">
+                <div class="card-body">
+                    <div>
+                        <h2 id="title" class="card-title float-left">Versinetic</h2>
+                        <p id="lastUpdate" class="float-right pt-1">Last update: 5s ago</p>
+                    </div>
+                    <p class="text-center">552ppm CO<sub>2</sub>, 23&#8451;, 50% Relative Humidity</p>
+                </div>
+                <div>
+                    <div class="card-actions dropdown dropdown-end float-right">
+                        <label tabindex="0" class="btn btn-sm m-2">Period</label>
+                        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+                            <li><a id="periodHour">Past Hour</a></li>
+                            <li><a id="periodDay">Past Day</a></li>
+                            <li><a id="periodWeek">Past Week</a></li>
+                            <li><a id="periodAll">All Data</a></li>
+                        </ul>
+                    </div>
+                    <div class="tabs pt-5">
+                        <a class="tab tab-lifted" id="co2Tab">CO<sub>2</sub></a>
+                        <a class="tab tab-lifted" id="tempTab">Temperature</a>
+                        <a class="tab tab-lifted" id="humiTab">Humidity</a>
+                    </div>
+                </div>
+                <div class="bg-white">
+                    <canvas id="co2Chart"></canvas>
+                    <canvas id="tempChart"></canvas>
+                    <canvas id="humiChart"></canvas>
+                </div>
+            </div>
+        </template>
+    </div>
 </body>
 
 <script src="/web/dist/bundle.js"></script>

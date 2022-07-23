@@ -22,9 +22,12 @@
         "webpack-cli": "^4.10.0"
     },
     "dependencies": {
-        "chart.js": "^3.8.0"
+        "chart.js": "^3.8.0",
+        "chartjs-adapter-moment": "^1.0.0",
+        "moment": "^2.29.4"
     },
     "prettier": {
-        "tabWidth": 4
+        "tabWidth": 4,
+        "printWidth": 120
     }
 }
