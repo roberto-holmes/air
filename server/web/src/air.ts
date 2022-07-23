@@ -1,9 +1,5 @@
 import Chart from "chart.js/auto";
-import { TimeScale, ChartItem, ChartTypeRegistry, registerables } from "chart.js";
-// import "chartjs-adapter-moment";
-// import Chart, { ChartTypeRegistry } from "chart.js/auto";
-// import _ from "chart.js";
-// import * as _ from "chart.js";
+import { ChartItem } from "chart.js";
 import "./styles.css";
 
 // Chart.register(TimeScale);
@@ -62,9 +58,9 @@ const testData: PastData = {
                 {
                     sensor: "humidity",
                     data: [
-                        { timestamp: currentUnixTime, value: 100 },
-                        { timestamp: currentUnixTime + 1, value: 50 },
-                        { timestamp: currentUnixTime + 2, value: 110 },
+                        { timestamp: currentUnixTime - 5, value: 100 },
+                        { timestamp: currentUnixTime - 4, value: 50 },
+                        { timestamp: currentUnixTime - 3, value: 110 },
                     ],
                 },
             ],
@@ -86,6 +82,8 @@ class Location {
     prefix: string;
     supportedSensors: number;
 
+    activeSensorId: SensorType | null;
+
     chartElements: (HTMLElement | null)[];
     chartColours: string[];
     charts: (Chart | undefined)[];
@@ -103,6 +101,7 @@ class Location {
         this.prefix = id + "-";
         this.supportedSensors = 0;
         this.hasEnabledDefaultChart = false;
+        this.activeSensorId = null;
 
         // this.xMaxRange = [0, 0, 0, 0, 0, 0];
         this.xMaxRange = new Array<number>(maxSensors * 2).fill(0);
@@ -232,6 +231,9 @@ class Location {
                 self.displayedPeriod = "all";
                 self.configureChartPeriod();
             };
+
+        // Set Last update to update every second
+        this.automateLastUpdate();
     }
     renameElementId(frag: DocumentFragment, id: string) {
         let x = frag.getElementById(id);
@@ -309,26 +311,24 @@ class Location {
 
             // Change which graph is being displayed
             if (element.id === this.prefix + "co2Tab" && co2ChartElement) {
+                this.activeSensorId = SensorType.co2;
                 co2ChartElement.style.display = "block";
                 if (temChartElement) temChartElement.style.display = "none";
                 if (humChartElement) humChartElement.style.display = "none";
             } else if (element.id === this.prefix + "tempTab" && temChartElement) {
+                this.activeSensorId = SensorType.temperature;
                 if (co2ChartElement) co2ChartElement.style.display = "none";
                 temChartElement.style.display = "block";
                 if (humChartElement) humChartElement.style.display = "none";
             } else if (element.id === this.prefix + "humiTab" && humChartElement) {
+                this.activeSensorId = SensorType.humidity;
                 if (co2ChartElement) co2ChartElement.style.display = "none";
                 if (temChartElement) temChartElement.style.display = "none";
                 humChartElement.style.display = "block";
             }
 
-            // let newData = {
-            //     x: Math.floor(Math.random() * 100),
-            //     y: Math.floor(Math.random() * 100),
-            // };
-            // if (this.co2Chart) this.updateChart(this.co2Chart, newData);
-
             element.classList.add("tab-active");
+            this.updateLastUpdate();
         }
     }
     // Fill appropriate chart with all past data
@@ -372,12 +372,51 @@ class Location {
         if (tabElement) tabElement.style.display = "block";
 
         if (!this.hasEnabledDefaultChart) {
+            this.activeSensorId = sensorId;
             let chartElement = this.chartElements[sensorId];
             if (chartElement) chartElement.style.display = "block";
             if (tabElement) tabElement.classList.add("tab-active");
 
             this.hasEnabledDefaultChart = true;
         }
+        this.updateLastUpdate();
+    }
+
+    // Add a new data point to a chart
+    addChartPoint(sensorId: SensorType, data: Data) {
+        let chart = this.charts[sensorId];
+
+        // Enable tab if not already
+        let tabElement = this.tabs[sensorId];
+        if (tabElement) tabElement.style.display = "block";
+
+        if (!this.hasEnabledDefaultChart) {
+            let chartElement = this.chartElements[sensorId];
+            if (chartElement) chartElement.style.display = "block";
+            if (tabElement) tabElement.classList.add("tab-active");
+
+            this.hasEnabledDefaultChart = true;
+        }
+
+        // Add data point to x range
+        if (this.xMaxRange[2 * sensorId] <= 0) this.xMaxRange[2 * sensorId] = data.timestamp;
+        this.xMaxRange[2 * sensorId + 1] = data.timestamp;
+
+        if (chart) {
+            // Get x and y
+            const step = {
+                x: data.timestamp,
+                y: data.value,
+            };
+            // Add to chart
+            chart.data.datasets.forEach((dataset) => {
+                dataset.data.push(step);
+            });
+
+            this.configureChartPeriod();
+        }
+
+        this.updateLastUpdate();
     }
     configureChartPeriod() {
         console.log("Configuring period");
@@ -400,8 +439,6 @@ class Location {
                     case "all":
                         chart.config.options.scales.x.min = firstTimestamp;
                         chart.config.options.scales.x.max = lastTimestamp;
-                        // chart.config.options.scales.x
-                        // console.log(lastTimestamp);
                         chart.config.options.scales.x.ticks.callback = function (value: any, index: any, ticks: any) {
                             const today = new Date(value * 1000);
                             const yyyy = today.getFullYear();
@@ -414,8 +451,6 @@ class Location {
                             if (dd_num < 10) dd_str = "0" + dd_num;
                             if (mm_num < 10) mm_str = "0" + mm_num;
 
-                            console.log(dd_str + "/" + mm_str + "/" + yyyy);
-
                             return dd_str + "/" + mm_str + "/" + yyyy;
                         };
                         break;
@@ -424,7 +459,6 @@ class Location {
                         if (lastTimestamp > 604800) chart.config.options.scales.x.min = lastTimestamp - 604800;
                         else chart.config.options.scales.x.min = 0;
                         chart.config.options.scales.x.max = lastTimestamp;
-                        // chart.config.options.scales.x.ticks.count = 7;
                         chart.config.options.scales.x.ticks.callback = function (value: any, index: any, ticks: any) {
                             const now = new Date(value * 1000);
                             const weekDay = now.getDay();
@@ -498,39 +532,32 @@ class Location {
             chart.update();
         }
     }
-    // Add a new data point to a chart
-    addChartPoint(sensorId: SensorType, data: Data) {
-        let chart = this.charts[sensorId];
+    updateLastUpdate() {
+        let lastUpdateElement = document.getElementById(this.prefix + "lastUpdate");
 
-        // Enable tab if not already
-        let tabElement = this.tabs[sensorId];
-        if (tabElement) tabElement.style.display = "block";
+        if (lastUpdateElement) {
+            if (this.activeSensorId !== null) {
+                let time_s = Math.round(Date.now() / 1000) - this.xMaxRange[2 * this.activeSensorId + 1];
 
-        if (!this.hasEnabledDefaultChart) {
-            let chartElement = this.chartElements[sensorId];
-            if (chartElement) chartElement.style.display = "block";
-            if (tabElement) tabElement.classList.add("tab-active");
-
-            this.hasEnabledDefaultChart = true;
+                // If the element exists, display the given value as seconds, minutes, hours, or days
+                if (time_s < 60) lastUpdateElement.innerHTML = "Last update: " + time_s + "s ago";
+                else if (time_s < 180)
+                    lastUpdateElement.innerHTML = "Last update: " + Math.round(time_s / 60) + "min ago";
+                else if (time_s < 48 * 60 * 60)
+                    lastUpdateElement.innerHTML = "Last update: " + Math.round(time_s / (60 * 60)) + "h ago";
+                else if (time_s < 730 * 24 * 60 * 60)
+                    lastUpdateElement.innerHTML = "Last update: " + Math.round(time_s / (24 * 60 * 60)) + " days ago";
+                else
+                    lastUpdateElement.innerHTML =
+                        "Last update: " + Math.round(time_s / (365 * 24 * 60 * 60)) + " years ago";
+            } else {
+                lastUpdateElement.innerHTML = "Last update: a long time ago";
+            }
         }
-
-        // Add data point to x range
-        if (this.xMaxRange[2 * sensorId] <= 0) this.xMaxRange[2 * sensorId] = data.timestamp;
-        this.xMaxRange[2 * sensorId + 1] = data.timestamp;
-
-        if (chart) {
-            // Get x and y
-            const step = {
-                x: data.timestamp,
-                y: data.value,
-            };
-            // Add to chart
-            chart.data.datasets.forEach((dataset) => {
-                dataset.data.push(step);
-            });
-
-            this.configureChartPeriod();
-        }
+    }
+    automateLastUpdate() {
+        this.updateLastUpdate();
+        setTimeout(this.automateLastUpdate.bind(this), 1000);
     }
 }
 
