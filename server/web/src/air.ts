@@ -541,8 +541,8 @@ class Location {
 
                 // If the element exists, display the given value as seconds, minutes, hours, or days
                 if (time_s < 60) lastUpdateElement.innerHTML = "Last update: " + time_s + "s ago";
-                else if (time_s < 180)
-                    lastUpdateElement.innerHTML = "Last update: " + Math.round(time_s / 60) + "min ago";
+                else if (time_s < 180 * 60)
+                    lastUpdateElement.innerHTML = "Last update: " + Math.round(time_s / 60) + " min ago";
                 else if (time_s < 48 * 60 * 60)
                     lastUpdateElement.innerHTML = "Last update: " + Math.round(time_s / (60 * 60)) + "h ago";
                 else if (time_s < 730 * 24 * 60 * 60)
