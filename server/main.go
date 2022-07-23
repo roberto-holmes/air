@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/roberto-holmes/air/server/cassandra"
+	"github.com/roberto-holmes/air/server/ghost"
 	"github.com/roberto-holmes/air/server/websocket"
 )
 
@@ -30,14 +32,14 @@ func main() {
 	go hub.Run()
 
 	// Setup database
-	// fmt.Println("Connecting to Cassandra")
-	// session := cassandra.ConnectDatabase("cassandra", "air")
-	// ctx := context.Background()
+	fmt.Println("Connecting to Cassandra")
+	session := cassandra.ConnectDatabase("cassandra", "air")
+	ctx := context.Background()
 
-	// cassandra.SetContext(ctx)
+	cassandra.SetContext(ctx)
 
 	// Setup TCP route
-	// go ghost.SetupTcp(session, ctx, hub)
+	go ghost.SetupTcp(session, ctx, hub)
 
 	r := gin.Default()
 	// r.Static("/assets")

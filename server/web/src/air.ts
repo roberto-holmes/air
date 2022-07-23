@@ -16,22 +16,22 @@ enum SensorType {
 }
 
 interface Data {
-    timestamp: number;
-    value: number;
+    Timestamp: number;
+    Value: number;
 }
 
 interface SensorData {
-    sensor: string;
-    data: Data[];
+    Sensor: string;
+    Data: Data[];
 }
 
 interface LocationData {
-    location: number;
-    sensors: SensorData[];
+    Location: number;
+    Sensors: SensorData[];
 }
 
 interface PastData {
-    all: LocationData[];
+    All: LocationData[];
 }
 
 const cardConfig: { name: string; bg: string }[] = [
@@ -43,24 +43,24 @@ const cardConfig: { name: string; bg: string }[] = [
 const currentUnixTime = Math.floor(Date.now() / 1000);
 
 const testData: PastData = {
-    all: [
+    All: [
         {
-            location: 1,
-            sensors: [
+            Location: 1,
+            Sensors: [
                 {
-                    sensor: "co2",
-                    data: [
-                        { timestamp: currentUnixTime, value: 500 },
-                        { timestamp: currentUnixTime + 1, value: 550 },
-                        { timestamp: currentUnixTime + 2, value: 650 },
+                    Sensor: "co2",
+                    Data: [
+                        { Timestamp: currentUnixTime, Value: 500 },
+                        { Timestamp: currentUnixTime + 1, Value: 550 },
+                        { Timestamp: currentUnixTime + 2, Value: 650 },
                     ],
                 },
                 {
-                    sensor: "humidity",
-                    data: [
-                        { timestamp: currentUnixTime - 5, value: 100 },
-                        { timestamp: currentUnixTime - 4, value: 50 },
-                        { timestamp: currentUnixTime - 3, value: 110 },
+                    Sensor: "temperature",
+                    Data: [
+                        { Timestamp: currentUnixTime - 5, Value: 100 },
+                        { Timestamp: currentUnixTime - 4, Value: 50 },
+                        { Timestamp: currentUnixTime - 3, Value: 110 },
                     ],
                 },
             ],
@@ -72,7 +72,6 @@ const testData: PastData = {
 // Chart.defaults.color = "#fff";
 // Chart.defaults.color = "#000";
 
-// getPastData();
 // createCard();
 // setupWebsocket();
 // graph();
@@ -160,20 +159,9 @@ class Location {
         this.chartColours[SensorType.humidity] = "rgb(251, 146, 60)";
 
         // Gnenerate each of the graphs
-        this.charts[SensorType.co2] = this.generateChart(
-            this.chartColours[SensorType.co2],
-            this.chartElements[SensorType.co2]
-        );
-
-        this.charts[SensorType.temperature] = this.generateChart(
-            this.chartColours[SensorType.temperature],
-            this.chartElements[SensorType.temperature]
-        );
-
-        this.charts[SensorType.humidity] = this.generateChart(
-            this.chartColours[SensorType.humidity],
-            this.chartElements[SensorType.humidity]
-        );
+        this.charts[SensorType.co2] = this.generateChart(SensorType.co2);
+        this.charts[SensorType.temperature] = this.generateChart(SensorType.temperature);
+        this.charts[SensorType.humidity] = this.generateChart(SensorType.humidity);
 
         // Configure onclick for tabs
         this.tabs[SensorType.co2] = document.getElementById(this.prefix + "co2Tab");
@@ -239,7 +227,9 @@ class Location {
         let x = frag.getElementById(id);
         if (x !== null) x.id = this.prefix + id;
     }
-    generateChart(colour: string, element: HTMLElement | null) {
+    generateChart(sensor: SensorType) {
+        const colour = this.chartColours[sensor];
+        const element = this.chartElements[sensor];
         if (element === null) return undefined;
         // Configure chart
         const data = {
@@ -266,11 +256,6 @@ class Location {
                         min: 0,
                         max: Date.now(),
                         type: "linear" as const,
-                        // type: "time" as const,
-                        // time: {
-                        //     isoWeek: true,
-                        //     unit: "month" as const,
-                        // },
                         bounds: <"ticks">"ticks",
                         ticks: {
                             count: 8,
@@ -279,9 +264,32 @@ class Location {
                             },
                         },
                     },
+                    y: {
+                        title: {
+                            display: true,
+                            text: "Units",
+                        },
+                    },
+                },
+                animation: {
+                    duration: 0,
                 },
             },
         };
+
+        switch (sensor) {
+            case SensorType.co2:
+                config.options.scales.y.title.text = "ppm";
+                break;
+            case SensorType.humidity:
+                config.options.scales.y.title.text = "%";
+                break;
+            case SensorType.temperature:
+                config.options.scales.y.title.text = "°C";
+                break;
+            default:
+                break;
+        }
         // Hide chart by default
         element.style.display = "none";
         return new Chart(<ChartItem>element, config);
@@ -333,10 +341,11 @@ class Location {
     }
     // Fill appropriate chart with all past data
     populateChart(data: SensorData) {
+        console.log(data);
         let chart: Chart | undefined = undefined;
         let sensorId: SensorType;
 
-        switch (data.sensor) {
+        switch (data.Sensor) {
             case "co2":
                 sensorId = SensorType.co2;
                 break;
@@ -350,15 +359,15 @@ class Location {
                 return;
         }
         chart = this.charts[sensorId];
-        this.xMaxRange[2 * sensorId] = data.data[0].timestamp;
-        this.xMaxRange[2 * sensorId + 1] = data.data[data.data.length - 1].timestamp;
+        this.xMaxRange[2 * sensorId] = data.Data[0].Timestamp;
+        this.xMaxRange[2 * sensorId + 1] = data.Data[data.Data.length - 1].Timestamp;
         if (chart) {
             // For each datapoint in the sensor data
-            for (let i = 0; i < data.data.length; i++) {
+            for (let i = 0; i < data.Data.length; i++) {
                 // Get x and y
                 const step = {
-                    x: data.data[i].timestamp,
-                    y: data.data[i].value,
+                    x: data.Data[i].Timestamp,
+                    y: this.formatData(sensorId, data.Data[i].Value),
                 };
                 // Add to chart
                 chart.data.datasets.forEach((dataset) => {
@@ -399,14 +408,14 @@ class Location {
         }
 
         // Add data point to x range
-        if (this.xMaxRange[2 * sensorId] <= 0) this.xMaxRange[2 * sensorId] = data.timestamp;
-        this.xMaxRange[2 * sensorId + 1] = data.timestamp;
+        if (this.xMaxRange[2 * sensorId] <= 0) this.xMaxRange[2 * sensorId] = data.Timestamp;
+        this.xMaxRange[2 * sensorId + 1] = data.Timestamp;
 
         if (chart) {
             // Get x and y
             const step = {
-                x: data.timestamp,
-                y: data.value,
+                x: data.Timestamp,
+                y: this.formatData(sensorId, data.Value),
             };
             // Add to chart
             chart.data.datasets.forEach((dataset) => {
@@ -419,13 +428,15 @@ class Location {
         this.updateLastUpdate();
     }
     configureChartPeriod() {
-        console.log("Configuring period");
         for (let i = 0; i < this.charts.length; i++) {
             const chart = this.charts[i];
             if (chart === undefined) continue;
 
             const firstTimestamp = this.xMaxRange[2 * i];
             const lastTimestamp = this.xMaxRange[2 * i + 1];
+
+            console.log(chart);
+            console.log("Min x: " + firstTimestamp + ", Max x: " + lastTimestamp);
 
             if (
                 chart.config.options &&
@@ -559,6 +570,17 @@ class Location {
         this.updateLastUpdate();
         setTimeout(this.automateLastUpdate.bind(this), 1000);
     }
+    formatData(sensorType: SensorType, rawValue: number): number {
+        switch (sensorType) {
+            case SensorType.co2:
+                return rawValue;
+            case SensorType.temperature:
+                return -45 + (175 * rawValue) / 0xffff;
+            case SensorType.humidity:
+                return (100 * rawValue) / 0xffff;
+        }
+        return 0;
+    }
 }
 
 let cards: Location[] = [];
@@ -592,17 +614,17 @@ function setupWebsocket() {
 
         console.log("Number of Users = " + userCount);
 
-        switch (sensorType) {
-            case SensorType.co2:
-                if (co2 !== null) co2.innerHTML = formatData(sensorType, data.Value).toString();
-                break;
-            case SensorType.temperature:
-                if (temp !== null) temp.innerHTML = formatData(sensorType, data.Value).toFixed(1);
-                break;
-            case SensorType.humidity:
-                if (humi !== null) humi.innerHTML = formatData(sensorType, data.Value).toFixed(1);
-                break;
-        }
+        // switch (sensorType) {
+        //     case SensorType.co2:
+        //         if (co2 !== null) co2.innerHTML = formatData(sensorType, data.Value).toString();
+        //         break;
+        //     case SensorType.temperature:
+        //         if (temp !== null) temp.innerHTML = formatData(sensorType, data.Value).toFixed(1);
+        //         break;
+        //     case SensorType.humidity:
+        //         if (humi !== null) humi.innerHTML = formatData(sensorType, data.Value).toFixed(1);
+        //         break;
+        // }
 
         // users.innerHTML = data.UserCount;
         if (time !== null) time.innerHTML = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
@@ -613,30 +635,19 @@ function getPastData() {
     console.log("Retrieving data");
     fetch("data")
         .then((response) => response.json())
-        .then((data) => console.log(data));
-}
-
-function formatData(sensorType: number, rawValue: number): number {
-    switch (sensorType) {
-        case SensorType.co2:
-            return rawValue;
-        case SensorType.temperature:
-            return -45 + (175 * rawValue) / 0xffff;
-        case SensorType.humidity:
-            return (100 * rawValue) / 0xffff;
-    }
-    return 0;
+        .then((data) => build(data));
+    // .then((data) => console.log(data));
 }
 
 function build(data: PastData) {
     // Loop through the locations
-    for (let i = 0; i < data.all.length; i++) {
-        const location = data.all[i];
-        cards.push(new Location(location.location));
+    for (let i = 0; i < data.All.length; i++) {
+        const location = data.All[i];
+        cards.push(new Location(location.Location));
 
         // Loop through sensors
-        for (let j = 0; j < location.sensors.length; j++) {
-            const sensor = location.sensors[j];
+        for (let j = 0; j < location.Sensors.length; j++) {
+            const sensor = location.Sensors[j];
             cards[i].populateChart(sensor);
         }
     }
@@ -647,6 +658,7 @@ function build(data: PastData) {
 }
 
 build(testData);
+// getPastData();
 
 // 	const config = {
 // 		type: <keyof ChartTypeRegistry>"line",
