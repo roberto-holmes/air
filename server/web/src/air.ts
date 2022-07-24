@@ -5,9 +5,12 @@ import "./styles.css";
 // Chart.register(TimeScale);
 // Chart.register(...registerables);
 
+main();
+
 const url = "192.168.1.131:8080";
 
 const maxSensors = 3;
+let lastUserCount = -1;
 
 enum SensorType {
     co2 = 0,
@@ -68,14 +71,6 @@ const testData: PastData = {
     ],
 };
 
-// Chart text colour
-// Chart.defaults.color = "#fff";
-// Chart.defaults.color = "#000";
-
-// createCard();
-// setupWebsocket();
-// graph();
-
 class Location {
     id: number;
     prefix: string;
@@ -102,7 +97,6 @@ class Location {
         this.hasEnabledDefaultChart = false;
         this.activeSensorId = null;
 
-        // this.xMaxRange = [0, 0, 0, 0, 0, 0];
         this.xMaxRange = new Array<number>(maxSensors * 2).fill(0);
         this.displayedPeriod = "hour";
 
@@ -341,7 +335,6 @@ class Location {
     }
     // Fill appropriate chart with all past data
     populateChart(data: SensorData) {
-        console.log(data);
         let chart: Chart | undefined = undefined;
         let sensorId: SensorType;
 
@@ -435,8 +428,8 @@ class Location {
             const firstTimestamp = this.xMaxRange[2 * i];
             const lastTimestamp = this.xMaxRange[2 * i + 1];
 
-            console.log(chart);
-            console.log("Min x: " + firstTimestamp + ", Max x: " + lastTimestamp);
+            // console.log(chart);
+            // console.log("Min x: " + firstTimestamp + ", Max x: " + lastTimestamp);
 
             if (
                 chart.config.options &&
@@ -587,53 +580,39 @@ let cards: Location[] = [];
 
 function setupWebsocket() {
     console.log("Setting up websocket");
-    // let users = document.getElementById("users");
-    let time = document.getElementById("time");
-    let co2 = document.getElementById("co2");
-    let temp = document.getElementById("temp");
-    let humi = document.getElementById("humi");
-    // let output = document.getElementById("output");
     let socket = new WebSocket("ws://" + url + "/ws");
 
-    // socket.onopen = function () {
-    // 	output.innerHTML += "Status: Connected\n";
-    // };
+    socket.onopen = function () {
+        console.log("Websocket connected");
+    };
 
     socket.onmessage = function (e) {
-        // output.innerHTML += "Server: " + e.data + "\n";
-        // console.log(e);
-        // console.log(e.data);
-        // console.log(JSON.parse(e.data));
-
+        // Extract all data out of JSON
         const data = JSON.parse(e.data);
-        console.log(data);
-        const date = new Date(data.Time * 1000);
+        // console.log(data);
+        const userCount = data.UserCount;
+        const timestamp = data.Time;
+        const value = data.Value;
         const sensorType = data.Type;
         const location = data.Location;
-        const userCount = data.UserCount;
 
-        console.log("Number of Users = " + userCount);
+        if (lastUserCount !== userCount) {
+            console.log("Number of Users = " + userCount);
+            lastUserCount = userCount;
+        }
 
-        // switch (sensorType) {
-        //     case SensorType.co2:
-        //         if (co2 !== null) co2.innerHTML = formatData(sensorType, data.Value).toString();
-        //         break;
-        //     case SensorType.temperature:
-        //         if (temp !== null) temp.innerHTML = formatData(sensorType, data.Value).toFixed(1);
-        //         break;
-        //     case SensorType.humidity:
-        //         if (humi !== null) humi.innerHTML = formatData(sensorType, data.Value).toFixed(1);
-        //         break;
-        // }
+        const datapoint: Data = {
+            Timestamp: timestamp,
+            Value: value,
+        };
 
-        // users.innerHTML = data.UserCount;
-        if (time !== null) time.innerHTML = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+        cards[location].addChartPoint(sensorType, datapoint);
     };
 }
 
-function getPastData() {
+async function getPastData() {
     console.log("Retrieving data");
-    fetch("data")
+    return fetch("data")
         .then((response) => response.json())
         .then((data) => build(data));
     // .then((data) => console.log(data));
@@ -657,25 +636,8 @@ function build(data: PastData) {
     console.log(cards);
 }
 
-build(testData);
-// getPastData();
-
-// 	const config = {
-// 		type: <keyof ChartTypeRegistry>"line",
-// 		// drawLine: true,
-// 		data: data,
-// 		options: {
-// 			plugins: {
-// 				legend: {
-// 					display: false,
-// 				},
-// 			},
-// 			spanGaps: true,
-// 			scales: {
-// 				x: {
-// 					type: <"linear">"linear",
-// 					position: <"bottom">"bottom",
-// 				},
-// 			},
-// 		},
-// 	};
+async function main() {
+    // build(testData);
+    await getPastData();
+    setupWebsocket();
+}
