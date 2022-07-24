@@ -88,6 +88,10 @@ class Location {
     xMaxRange: number[];
     displayedPeriod: string;
 
+    lastCo2Value: number;
+    lastTemValue: number;
+    lastHumValue: number;
+
     constructor(id: number) {
         const self = this;
 
@@ -96,6 +100,10 @@ class Location {
         this.supportedSensors = 0;
         this.hasEnabledDefaultChart = false;
         this.activeSensorId = null;
+
+        this.lastCo2Value = 0;
+        this.lastTemValue = 0;
+        this.lastHumValue = 0;
 
         this.xMaxRange = new Array<number>(maxSensors * 2).fill(0);
         this.displayedPeriod = "hour";
@@ -114,6 +122,7 @@ class Location {
         this.renameElementId(frag, "title");
         this.renameElementId(frag, "lastUpdate");
         this.renameElementId(frag, "cardMain");
+        this.renameElementId(frag, "lastValues");
 
         this.renameElementId(frag, "co2Chart");
         this.renameElementId(frag, "tempChart");
@@ -341,12 +350,15 @@ class Location {
         switch (data.Sensor) {
             case "co2":
                 sensorId = SensorType.co2;
+                this.lastCo2Value = data.Data[data.Data.length - 1].Value;
                 break;
             case "temperature":
                 sensorId = SensorType.temperature;
+                this.lastTemValue = data.Data[data.Data.length - 1].Value;
                 break;
             case "humidity":
                 sensorId = SensorType.humidity;
+                this.lastHumValue = data.Data[data.Data.length - 1].Value;
                 break;
             default:
                 return;
@@ -382,11 +394,24 @@ class Location {
             this.hasEnabledDefaultChart = true;
         }
         this.updateLastUpdate();
+        this.updateDisplayedValues();
     }
 
     // Add a new data point to a chart
     addChartPoint(sensorId: SensorType, data: Data) {
         let chart = this.charts[sensorId];
+
+        switch (sensorId) {
+            case SensorType.co2:
+                this.lastCo2Value = data.Value;
+                break;
+            case SensorType.temperature:
+                this.lastTemValue = data.Value;
+                break;
+            case SensorType.humidity:
+                this.lastHumValue = data.Value;
+                break;
+        }
 
         // Enable tab if not already
         let tabElement = this.tabs[sensorId];
@@ -416,6 +441,7 @@ class Location {
             });
 
             this.configureChartPeriod();
+            this.updateDisplayedValues();
         }
 
         this.updateLastUpdate();
@@ -562,6 +588,18 @@ class Location {
     automateLastUpdate() {
         this.updateLastUpdate();
         setTimeout(this.automateLastUpdate.bind(this), 1000);
+    }
+    updateDisplayedValues() {
+        let e = document.getElementById(this.prefix + "lastValues");
+
+        let s = "";
+
+        if (this.lastCo2Value) s += this.formatData(SensorType.co2, this.lastCo2Value) + "ppm CO<sub>2</sub> ";
+        if (this.lastTemValue) s += this.formatData(SensorType.temperature, this.lastTemValue).toFixed(1) + "&#8451; ";
+        if (this.lastHumValue)
+            s += this.formatData(SensorType.humidity, this.lastHumValue).toFixed(0) + "% Relative Humidity";
+
+        if (e) e.innerHTML = s;
     }
     formatData(sensorType: SensorType, rawValue: number): number {
         switch (sensorType) {

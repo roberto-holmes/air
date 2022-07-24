@@ -6,7 +6,7 @@ Run container:
 
 Stop container:
 `docker stop go`
-docker compose up --build
+npm run build; docker compose up --build
 docker compose exec cassandra /bin/bash
 
 tsc.cmd -w
