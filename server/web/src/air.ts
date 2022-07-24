@@ -5,8 +5,6 @@ import "./styles.css";
 // Chart.register(TimeScale);
 // Chart.register(...registerables);
 
-main();
-
 const url = "192.168.1.131:8080";
 
 const maxSensors = 3;
@@ -238,6 +236,8 @@ class Location {
         const data = {
             datasets: [
                 {
+                    // parsing: false as const,
+                    // normalized: true as const,
                     backgroundColor: colour,
                     borderColor: colour,
                     data: [],
@@ -274,9 +274,8 @@ class Location {
                         },
                     },
                 },
-                animation: {
-                    duration: 0,
-                },
+                animation: false as const,
+                // showLine: false,
             },
         };
 
@@ -679,3 +678,5 @@ async function main() {
     await getPastData();
     setupWebsocket();
 }
+
+main();
